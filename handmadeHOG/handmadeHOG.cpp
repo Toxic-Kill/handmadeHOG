@@ -84,21 +84,20 @@ void calHOG(cv::Mat Mat1, float *hist, int dim, int size)
 	cv::cartToPolar(gx, gy, mag, angle, true);
 
 	//遍历赋值
+	int cellNum = 0;
 	for (int i = 0; i < nx; i++)
 	{
 		for (int j = 0; j < ny; j++)
 		{
-			hist += (i*nx + j)*dim;
 			for (int m = 0; m < size; m++)
 			{
 				for (int n = 0; n < size; n++)
 				{
-					int num = angle.at<float>[i*size + m, j*size + n] / sinAngle;
-					hist += num;
-					*hist += mag.at<float>[i*size + m, j*size + n];
-					hist -= num;
+					int num = (angle.at<float>(j*size + n, i*size + m) )/ sinAngle;
+					hist[cellNum + num] += mag.at<float>(j*size + m, i*size + n);
 				}
 			}
+			cellNum++;
 		}
 	}
 }
