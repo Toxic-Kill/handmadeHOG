@@ -94,7 +94,7 @@ void calHOG(cv::Mat Mat1, float *hist, int dim, int size)
 				for (int n = 0; n < size; n++)
 				{
 					int num = (angle.at<float>(j*size + n, i*size + m) )/ sinAngle;
-					hist[cellNum + num] += mag.at<float>(j*size + m, i*size + n);
+					hist[cellNum*8 + num] += mag.at<float>(j*size + m, i*size + n);
 				}
 			}
 			cellNum++;
