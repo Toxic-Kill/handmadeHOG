@@ -1,20 +1,117 @@
-﻿// handmadeHOG.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
+﻿#include <iostream>
+#include<opencv2/opencv.hpp>
+#include<cmath>
 
-#include <iostream>
+using namespace std;
+using namespace cv;
 
 int main()
 {
-    std::cout << "Hello World!\n";
+
+
+	//函数声明
+	void calHOG(cv::Mat Mat1, float *hist, int dim, int size);
+	float calDis(float *hist1, float *hist2, int size);
+
+
+
+	//读取图像
+	cv::Mat srcMat = cv::imread("D:\\Files\\hogtemplate.jpg",0);
+	cv::Mat fstMat = cv::imread("D:\\Files\\img1.jpg",0);
+	cv::Mat sedMat = cv::imread("D:\\Files\\img2.jpg",0);
+
+	//判断读取成功性
+	if (srcMat.empty() || fstMat.empty() || sedMat.empty())
+	{
+		std::cout << "Can't open the image" << endl;
+		return -1;
+	}
+
+	//设置参数
+	int cellSize = 16;
+	int aglDim = 8;
+	int nx = srcMat.cols / cellSize;
+	int ny = srcMat.rows / cellSize;
+
+	int bins = nx * ny * aglDim;
+	
+	float * src_hist = new float[bins];
+	memset(src_hist, 0, sizeof(float)*bins);
+	float * fst_hist = new float[bins];
+	memset(fst_hist, 0, sizeof(float)*bins);
+	float * sed_hist = new float[bins];
+	memset(sed_hist, 0, sizeof(float)*bins);
+
+	//计算图像HOG
+	calHOG(srcMat, src_hist, aglDim, cellSize);
+	calHOG(fstMat, fst_hist, aglDim, cellSize);
+	calHOG(sedMat, sed_hist, aglDim, cellSize);
+
+	//比较两张图片
+	float dis1 = calDis(src_hist, fst_hist, bins);
+	float dis2 = calDis(src_hist, sed_hist, bins);
+
+	//输出比较结果
+	if (dis1 <= dis2)
+	{
+		std::cout << "img1 is more similar" << endl;
+	}
+	else
+	{
+		std::cout << "img2 is more similar" << endl;
+	}
+
+	delete[] src_hist;
+	delete[] fst_hist;
+	delete[] sed_hist;
+
+	return 0;
 }
 
-// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
-// 调试程序: F5 或调试 >“开始调试”菜单
+//定义计算图像HOG的函数
+void calHOG(cv::Mat Mat1, float *hist, int dim, int size)
+{
+	int nx = Mat1.cols / size;
+	int ny = Mat1.rows / size;
+	
+	int sinAngle = 360 / dim;
 
-// 入门使用技巧: 
-//   1. 使用解决方案资源管理器窗口添加/管理文件
-//   2. 使用团队资源管理器窗口连接到源代码管理
-//   3. 使用输出窗口查看生成输出和其他消息
-//   4. 使用错误列表窗口查看错误
-//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
-//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
+	//计算梯度与角度
+	cv::Mat gx, gy;
+	cv::Mat mag, angle;
+	cv::Sobel(Mat1, gx, CV_32F, 1, 0, 1);
+	cv::Sobel(Mat1, gy, CV_32F, 0, 1, 1);
+	cv::cartToPolar(gx, gy, mag, angle, true);
+
+	//遍历赋值
+	for (int i = 0; i < nx; i++)
+	{
+		for (int j = 0; j < ny; j++)
+		{
+			hist += (i*nx + j)*dim;
+			for (int m = 0; m < size; m++)
+			{
+				for (int n = 0; n < size; n++)
+				{
+					int num = angle.at<float>[i*size + m, j*size + n] / sinAngle;
+					hist += num;
+					*hist += mag.at<float>[i*size + m, j*size + n];
+					hist -= num;
+				}
+			}
+		}
+	}
+}
+
+
+//定义比较图像的函数
+float calDis(float *hist1, float *hist2, int size)
+{
+	float sum = 0;
+	for (int i = 0; i < size; i++)
+	{
+		sum += (hist1[i] - hist2[i])*(hist1[i] - hist2[i]);
+	}
+	sum = sqrt(sum);
+	return sum;
+}
